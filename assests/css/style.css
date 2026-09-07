@@ -1,0 +1,40 @@
+body {
+    background-color: #f4f7fb;
+    color: #1f2937;
+    padding-bottom: 20px;
+}
+.card {
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+.navbar-brand {
+    letter-spacing: 0.02em;
+}
+.dashboard-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+}
+.dashboard-heading h1 {
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+}
+.table th {
+    white-space: nowrap;
+}
+.alert-light {
+    background-color: #ffffff;
+}
+#prediction-result {
+    margin-top: 15px;
+}
+.badge { font-size: 0.85em; }
+#risk-gauge { max-width: 250px; height: 200px !important; margin: 0 auto; }
+.card-body canvas:not(#risk-gauge) { min-height: 260px; }
+footer { margin-top: 3rem; }
+@media (max-width: 768px) {
+    .dashboard-heading { display: block; }
+    #risk-gauge { max-width: 200px; height: 160px !important; }
+    .card-body canvas:not(#risk-gauge) { min-height: 220px; }
+}

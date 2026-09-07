@@ -1,0 +1,4 @@
+node_id,soil_moisture,rainfall_mm,humidity,pressure,temperature,wind_speed,source,timestamp
+1,,120,90,1008,21,5.1,API,2026-09-01 10:00:00
+1,,10,60,1015,22,2.0,API,2026-09-01 11:00:00
+1,,150,95,1005,20,6.5,API,2026-09-01 12:00:00
