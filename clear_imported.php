@@ -1,25 +1,19 @@
 <?php
 require_once 'auth.php';
 require_once 'config.php';
-require_once 'classes/SensorNode.php';
 require_once 'classes/Telemetry.php';
+require_once 'classes/SensorNode.php';
 
-$node_id = filter_input(INPUT_POST, 'node_id', FILTER_VALIDATE_INT)
-    ?: filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT)
-    ?: 1;
+$node_id = filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT) ?: 1;
 $node = (new SensorNode($conn))->getById($node_id);
 if (!$node) {
     http_response_code(400);
     exit('Invalid location.');
 }
 
-$deleted = 0;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $telemetry = new Telemetry($conn);
-    $before = $conn->prepare("SELECT COUNT(*) FROM telemetry_logs WHERE node_id = ? AND source = 'CSV'");
-    $before->execute([$node_id]);
-    $deleted = (int) $before->fetchColumn();
-    $telemetry->deleteImportedByNode($node_id);
+$deleted = false;
+if (filter_input(INPUT_GET, 'confirm', FILTER_VALIDATE_INT) === 1) {
+    $deleted = (new Telemetry($conn))->deleteImportedByNode($node_id);
 }
 ?>
 <!DOCTYPE html>
@@ -27,31 +21,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Remove Imported Data — Smart Slope</title>
+    <title>Clear Imported Data — Smart Slope</title>
     <link href="assests/css/bootstrap.min.css" rel="stylesheet">
     <link href="assests/css/style.css" rel="stylesheet">
 </head>
 <body class="bg-light">
     <main class="container py-5">
         <div class="mx-auto" style="max-width: 620px;">
-            <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
-                <div class="alert alert-success shadow-sm">
-                    <h1 class="h4">Imported data removed</h1>
-                    <p><?= $deleted ?> imported record(s) were removed from <?= htmlspecialchars($node['location_name']) ?>.</p>
-                    <a class="btn btn-success" href="index.php?node_id=<?= (int) $node_id ?>">Refresh dashboard</a>
-                </div>
+            <h1 class="h3 mb-3">Clear Imported Data</h1>
+            <p>Location: <strong><?= htmlspecialchars($node['location_name']) ?></strong></p>
+            <?php if ($deleted): ?>
+                <div class="alert alert-success">Imported (CSV) records removed. Live API readings are preserved.</div>
+                <a href="index.php?node_id=<?= (int) $node_id ?>" class="btn btn-success">Back to Dashboard</a>
             <?php else: ?>
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h1 class="h4">Remove imported data</h1>
-                        <p>This removes only CSV-imported records for <strong><?= htmlspecialchars($node['location_name']) ?></strong>. Live API weather records will not be deleted.</p>
-                        <form method="POST">
-                            <input type="hidden" name="node_id" value="<?= (int) $node_id ?>">
-                            <button type="submit" class="btn btn-danger">Remove imported data</button>
-                            <a class="btn btn-outline-secondary" href="index.php?node_id=<?= (int) $node_id ?>">Cancel</a>
-                        </form>
-                    </div>
+                <div class="alert alert-warning">
+                    This removes only CSV-imported records for this location. Live API data will remain.
                 </div>
+                <a href="clear_imported.php?node_id=<?= (int) $node_id ?>&confirm=1"
+                   class="btn btn-danger">Yes, remove imported data</a>
+                <a href="index.php?node_id=<?= (int) $node_id ?>" class="btn btn-outline-secondary">Cancel</a>
             <?php endif; ?>
         </div>
     </main>
