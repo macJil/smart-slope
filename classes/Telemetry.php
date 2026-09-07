@@ -21,6 +21,13 @@ class Telemetry {
             $temperature, $wind_speed, $source
         ]);
     }
+    // UPDATE risk level for a stored telemetry record
+    public function updateRiskLevel($log_id, $risk_level) {
+        $stmt = $this->conn->prepare(
+            "UPDATE telemetry_logs SET risk_level = ? WHERE log_id = ?"
+        );
+        return $stmt->execute([(int) $risk_level, (int) $log_id]);
+    }
 
     // READ (latest N records)
     public function getLatest($limit = 50) {

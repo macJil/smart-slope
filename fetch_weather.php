@@ -1,7 +1,9 @@
 <?php
+require_once 'auth.php';
 require_once 'config.php';
 require_once 'classes/Telemetry.php';
 require_once 'classes/SensorNode.php';
+require_once 'classes/Prediction.php';
 
 $node_id = filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT) ?: 1;
 $node = (new SensorNode($conn))->getById($node_id);
@@ -39,6 +41,7 @@ $wind_speed = $current['wind_speed_10m'];
 $telemetry = new Telemetry($conn);
 
 // node_id = 1 (the Loay mock node), soil_moisture = null (Phase 1, no sensor)
+// node_id = 1 (the Loay mock node), soil_moisture = null (Phase 1, no sensor)
 $telemetry->insert(
     $node_id,
     null,     // soil_moisture (NULL in Phase 1)
@@ -49,6 +52,18 @@ $telemetry->insert(
     $wind_speed,
     'API'     // source
 );
+
+// Run the trained model on the freshly ingested reading and persist the risk level.
+// This is the same flow real ESP32 sensors will use in the next phase.
+$log_id = (int) $conn->lastInsertId();
+$pred = Prediction::run(
+    (float) $rainfall,
+    (float) $humidity,
+    (float) $pressure,
+    (float) $temperature,
+    (float) $wind_speed
+);
+$telemetry->updateRiskLevel($log_id, $pred['prediction']);
 
 ?>
 <!DOCTYPE html>

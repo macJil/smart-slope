@@ -32,7 +32,7 @@ function updateCharts(data) {
     const rainfall = data.map(d => parseFloat(d.rainfall_mm));
     const humidity = data.map(d => parseFloat(d.humidity));
     const temperature = data.map(d => parseFloat(d.temperature));
-    const risk = data.map(d => parseFloat(d.rainfall_mm) > 100 ? 1 : 0);
+    const risk = data.map(d => riskValue(d));
 
     if (rainfallChart) rainfallChart.destroy();
     if (tempHumidityChart) tempHumidityChart.destroy();
@@ -160,11 +160,26 @@ function updateOperationalAlert(prediction) {
     alert.innerHTML = '<strong>Current status:</strong> No immediate landslide warning from the latest reading.';
 }
 
+function esc(v) {
+    const div = document.createElement('div');
+    div.textContent = (v === null || v === undefined || v === '') ? '—' : String(v);
+    return div.innerHTML;
+}
+
+// Read the stored model risk, falling back to the threshold for rows
+// imported/ingested before risk_level existed (null values).
+function riskValue(d) {
+    if (d.risk_level !== null && d.risk_level !== undefined) {
+        return parseInt(d.risk_level);
+    }
+    return parseFloat(d.rainfall_mm) > 100 ? 1 : 0;
+}
+
 function updateTable(data) {
     const tbody = document.getElementById('data-table');
     tbody.innerHTML = '';
     data.slice(-20).reverse().forEach(d => {
-        const risk = parseFloat(d.rainfall_mm) > 100
+        const risk = riskValue(d) === 1
             ? '<span class="badge bg-danger">High</span>'
             : '<span class="badge bg-success">Low</span>';
         const source = d.source === 'API'
@@ -172,12 +187,12 @@ function updateTable(data) {
             : '<span class="badge bg-secondary">ESP32</span>';
         tbody.innerHTML += `
             <tr>
-                <td>${d.timestamp}</td>
-                <td>${d.soil_moisture ?? '—'}</td>
-                <td>${parseFloat(d.rainfall_mm).toFixed(1)}</td>
-                <td>${parseFloat(d.humidity).toFixed(1)}</td>
-                <td>${parseFloat(d.pressure).toFixed(1)}</td>
-                <td>${parseFloat(d.temperature).toFixed(1)}</td>
+                <td>${esc(d.timestamp)}</td>
+                <td>${esc(d.soil_moisture)}</td>
+                <td>${esc(parseFloat(d.rainfall_mm).toFixed(1))}</td>
+                <td>${esc(parseFloat(d.humidity).toFixed(1))}</td>
+                <td>${esc(parseFloat(d.pressure).toFixed(1))}</td>
+                <td>${esc(parseFloat(d.temperature).toFixed(1))}</td>
                 <td>${source}</td>
                 <td>${risk}</td>
             </tr>`;
