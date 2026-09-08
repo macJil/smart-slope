@@ -57,3 +57,7 @@ INSERT INTO sensor_nodes (location_name, latitude, longitude, status) VALUES
 ('Barangay Loay, Baguio City',     16.4173, 120.5963, 'active'),
 ('Barangay Pinget, Baguio City',   16.4230, 120.5900, 'active'),
 ('Barangay Gibraltar, Baguio City', 16.4078, 120.6000, 'active');
+
+-- Seed: Admin user (password: admin123)
+INSERT INTO users (username, password_hash, full_name, role) VALUES
+('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', 'admin');

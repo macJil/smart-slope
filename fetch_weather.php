@@ -4,8 +4,6 @@
 
 require_once 'auth.php';
 require_once 'config.php';
-require_once 'classes/Telemetry.php';
-require_once 'classes/SensorNode.php';
 require_once 'classes/RiskEngine.php';
 
 header('Content-Type: application/json');
@@ -14,7 +12,9 @@ $node_id = filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT)
     ?: filter_input(INPUT_POST, 'node_id', FILTER_VALIDATE_INT)
     ?: 1;
 
-$node = (new SensorNode($conn))->getById($node_id);
+$stmt = $conn->prepare('SELECT * FROM sensor_nodes WHERE node_id = ? AND status = ?');
+$stmt->execute([$node_id, 'active']);
+$node = $stmt->fetch();
 if (!$node) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid monitoring location.']);
@@ -47,12 +47,16 @@ $wind_speed   = (float) ($current['wind_speed_10m'] ?? 0);
 $risk = RiskEngine::calculate($rainfall, $humidity, null, $pressure, $temperature, $wind_speed);
 
 // ── Store in database ───────────────────────────────────
-$telemetry = new Telemetry($conn);
-$telemetry->insert(
-    $node_id, null, $rainfall, $humidity, $pressure,
-    $temperature, $wind_speed,
-    $risk['score'], $risk['level'], 'API'
+$stmt = $conn->prepare(
+    'INSERT INTO telemetry_logs
+        (node_id, soil_moisture, rainfall_mm, humidity, pressure, temperature,
+         wind_speed, risk_score, risk_level, source, timestamp, created_at)
+     VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
 );
+$stmt->execute([
+    $node_id, $rainfall, $humidity, $pressure, $temperature, $wind_speed,
+    $risk['score'], $risk['level'], 'API'
+]);
 
 // ── Return JSON ─────────────────────────────────────────
 echo json_encode([

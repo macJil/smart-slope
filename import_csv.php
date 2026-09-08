@@ -2,10 +2,9 @@
 // import.php - CSV import for telemetry data
 require 'auth.php';
 require 'config.php';
+require 'classes/RiskEngine.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, 'r');
     
@@ -14,20 +13,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     
     $imported = 0;
     while (($row = fgetcsv($handle)) !== false) {
-        // CSV format: location_name,rainfall_mm,humidity,temperature,pressure,wind_speed,soil_moisture
-        $stmt = $pdo->prepare(
+        // CSV format: node_id,soil_moisture,rainfall_mm,humidity,pressure,temperature,wind_speed,source,timestamp
+        $nodeId = (int)($row[0] ?? 0);
+        $soil = ($row[1] ?? '') !== '' ? (float)$row[1] : null;
+        $rainfall = (float)($row[2] ?? 0);
+        $humidity = (float)($row[3] ?? 0);
+        $pressure = (float)($row[4] ?? 1013);
+        $temperature = (float)($row[5] ?? 0);
+        $wind = (float)($row[6] ?? 0);
+        $source = in_array(($row[7] ?? 'CSV'), ['API', 'ESP32', 'CSV'], true) ? $row[7] : 'CSV';
+        $timestamp = $row[8] ?? date('Y-m-d H:i:s');
+        $risk = RiskEngine::calculate($rainfall, $humidity, $soil, $pressure, $temperature, $wind);
+
+        $stmt = $conn->prepare(
             "INSERT INTO telemetry_logs 
-            (location_name, rainfall_mm, humidity, temperature, pressure, wind_speed, soil_moisture, risk_score, risk_level, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'Low', NOW())"
+            (node_id, soil_moisture, rainfall_mm, humidity, pressure, temperature, wind_speed, risk_score, risk_level, source, timestamp, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
         );
         $stmt->execute([
-            $row[0] ?? 'Unknown',
-            (float)($row[1] ?? 0),
-            (float)($row[2] ?? 0),
-            (float)($row[3] ?? 0),
-            (float)($row[4] ?? 1013),
-            (float)($row[5] ?? 0),
-            (float)($row[6] ?? 0)
+            $nodeId, $soil, $rainfall, $humidity, $pressure, $temperature,
+            $wind, $risk['score'], $risk['level'], $source, $timestamp
         ]);
         $imported++;
     }
@@ -45,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
 <body>
 <div class="container mt-4">
     <h2>Import CSV Data</h2>
-    <p class="text-muted">Upload CSV file with columns: location_name,rainfall_mm,humidity,temperature,pressure,wind_speed,soil_moisture</p>
+    <p class="text-muted">Upload CSV with columns: node_id,soil_moisture,rainfall_mm,humidity,pressure,temperature,wind_speed,source,timestamp</p>
     
     <?php if (isset($message)): ?>
         <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
