@@ -8,16 +8,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
-    // PDO prepared statement (prevents SQL Injection)
     $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    // password_verify checks against the stored hash (secure storage)
     if ($user && password_verify($password, $user['password_hash'])) {
-        $_SESSION['user_id'] = $user['user_id'];
+        session_regenerate_id(true);  // prevent session fixation
+        $_SESSION['user_id']  = $user['user_id'];
         $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
+        $_SESSION['role']     = $user['role'];
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         header('Location: index.php');
         exit;
     } else {
@@ -26,10 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Smart Slope — Login</title>
+    <title>Smart Slope V2 — Login</title>
     <link href="assests/css/bootstrap.min.css" rel="stylesheet">
     <link href="assests/css/style.css" rel="stylesheet">
 </head>
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="card shadow">
             <div class="card-body p-4">
                 <div class="text-center mb-4">
-                    <h1 class="h3 mb-2">Smart Slope</h1>
+                    <h1 class="h3 mb-2">Smart Slope V2</h1>
                     <p class="text-muted mb-0">Landslide risk monitoring</p>
                 </div>
                 <?php if ($error): ?>
@@ -47,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
                 <form method="POST">
                     <div class="mb-3">
-                        <label>Username</label>
-                        <input type="text" name="username" class="form-control" required>
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required autofocus>
                     </div>
                     <div class="mb-3">
-                        <label>Password</label>
+                        <label class="form-label">Password</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Sign in</button>

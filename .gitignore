@@ -1,0 +1,14 @@
+# Secrets — never commit your API key
+config.php
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Python ML (removed in V2)
+*.pkl
+*.py
+
+# Editor files
+*.swp
+.vscode/

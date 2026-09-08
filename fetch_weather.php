@@ -1,69 +1,69 @@
 <?php
-// fetch_weather.php — Fetches live weather from Open-Meteo API and stores it
+// fetch_weather.php — Fetch live weather from Open-Meteo and store with risk score.
+// Returns JSON. Called by the dashboard "Update Weather" button via AJAX.
+
 require_once 'auth.php';
 require_once 'config.php';
 require_once 'classes/Telemetry.php';
 require_once 'classes/SensorNode.php';
-require_once 'classes/Prediction.php';
+require_once 'classes/RiskEngine.php';
 
-// Get the selected location
-$node_id = filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT) ?: 1;
+header('Content-Type: application/json');
+
+$node_id = filter_input(INPUT_GET, 'node_id', FILTER_VALIDATE_INT)
+    ?: filter_input(INPUT_POST, 'node_id', FILTER_VALIDATE_INT)
+    ?: 1;
+
 $node = (new SensorNode($conn))->getById($node_id);
 if (!$node) {
     http_response_code(400);
-    exit('Invalid monitoring location.');
+    echo json_encode(['success' => false, 'message' => 'Invalid monitoring location.']);
+    exit;
 }
 
-// Call Open-Meteo REST API (free, no API key needed)
-$url = "https://api.open-meteo.com/v1/forecast?latitude={$node['latitude']}&longitude={$node['longitude']}"
-     . "&current=rain,relative_humidity_2m,pressure_msl,temperature_2m,wind_speed_10m";
+// ── Call Open-Meteo REST API (free, no key needed) ──────
+$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $node['latitude']
+     . '&longitude=' . $node['longitude']
+     . '&current=rain,relative_humidity_2m,pressure_msl,temperature_2m,wind_speed_10m';
 
 $response = @file_get_contents($url);
-$weather = $response ? json_decode($response, true) : null;
-$current = is_array($weather) ? ($weather['current'] ?? null) : null;
+$weather  = $response ? json_decode($response, true) : null;
+$current  = is_array($weather) ? ($weather['current'] ?? null) : null;
 
 if (!is_array($current)) {
     http_response_code(502);
-    exit('Weather service is temporarily unavailable.');
+    echo json_encode(['success' => false, 'message' => 'Weather service is temporarily unavailable.']);
+    exit;
 }
 
-// Extract weather values
-$rainfall = $current['rain'] ?? 0;
-$humidity = $current['relative_humidity_2m'];
-$pressure = $current['pressure_msl'];
-$temperature = $current['temperature_2m'];
-$wind_speed = $current['wind_speed_10m'];
+// ── Extract weather values ─────────────────────────────
+$rainfall     = (float) ($current['rain'] ?? 0);
+$humidity     = (float) ($current['relative_humidity_2m'] ?? 0);
+$pressure     = (float) ($current['pressure_msl'] ?? 1013);
+$temperature  = (float) ($current['temperature_2m'] ?? 20);
+$wind_speed   = (float) ($current['wind_speed_10m'] ?? 0);
 
-// Run AI prediction on the weather data
-$pred = Prediction::run($rainfall, $humidity, $pressure, $temperature, $wind_speed);
-$risk_level = $pred['prediction'];
+// ── Calculate risk with RiskEngine ──────────────────────
+$risk = RiskEngine::calculate($rainfall, $humidity, null, $pressure, $temperature, $wind_speed);
 
-// Store in database with the computed risk level
+// ── Store in database ───────────────────────────────────
 $telemetry = new Telemetry($conn);
 $telemetry->insert(
     $node_id, null, $rainfall, $humidity, $pressure,
-    $temperature, $wind_speed, 'API', $risk_level
+    $temperature, $wind_speed,
+    $risk['score'], $risk['level'], 'API'
 );
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Weather Fetch — Smart Slope</title>
-    <link href="assests/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assests/css/style.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <main class="container py-5">
-        <div class="mx-auto" style="max-width: 620px;">
-            <div class="alert alert-success shadow-sm">
-                <h1 class="h4">Weather data updated</h1>
-                <p class="mb-3">Open-Meteo data for <?= htmlspecialchars($node['location_name']) ?> was stored successfully.</p>
-                <a class="btn btn-success" href="index.php?node_id=<?= (int) $node_id ?>">Back to Dashboard</a>
-            </div>
-        </div>
-    </main>
-</body>
-</html>
-<?php $conn = null; ?>
+
+// ── Return JSON ─────────────────────────────────────────
+echo json_encode([
+    'success'    => true,
+    'message'    => 'Weather updated for ' . $node['location_name'],
+    'location'   => $node['location_name'],
+    'risk_score' => $risk['score'],
+    'risk_level' => $risk['level'],
+    'rainfall_mm'  => $rainfall,
+    'humidity'     => $humidity,
+    'pressure'     => $pressure,
+    'temperature'  => $temperature,
+    'wind_speed'   => $wind_speed,
+]);
