@@ -1,66 +1,49 @@
 <?php
+// login.php
 session_start();
-require_once 'config.php';
 
-$error = '';
+// Hardcoded credentials for student prototype
+$VALID_USER = 'admin';
+$VALID_PASS = 'password123';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
-
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
-
-    if ($user && password_verify($password, $user['password_hash'])) {
-        session_regenerate_id(true);  // prevent session fixation
-        $_SESSION['user_id']  = $user['user_id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role']     = $user['role'];
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    $user = $_POST['username'] ?? '';
+    $pass = $_POST['password'] ?? '';
+    
+    if ($user === $VALID_USER && $pass === $VALID_PASS) {
+        $_SESSION['logged_in'] = true;
+        $_SESSION['username'] = $user;
         header('Location: index.php');
         exit;
-    } else {
-        $error = 'Invalid username or password.';
     }
+    $error = 'Invalid username or password';
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Smart Slope V2 — Login</title>
-    <link href="assests/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assests/css/style.css" rel="stylesheet">
+    <title>Login - Smart Slope</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    <main class="container py-5">
-    <div class="mx-auto" style="max-width: 420px;">
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <h1 class="h3 mb-2">Smart Slope V2</h1>
-                    <p class="text-muted mb-0">Landslide risk monitoring</p>
+<div class="container" style="max-width: 400px; margin-top: 100px;">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title text-center">Smart Slope V2</h3>
+            <form method="POST">
+                <div class="mb-3">
+                    <input type="text" name="username" class="form-control" placeholder="Username" required>
                 </div>
-                <?php if ($error): ?>
-                    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                <div class="mb-3">
+                    <input type="password" name="password" class="form-control" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+                <?php if (isset($error)): ?>
+                    <div class="alert alert-danger mt-3 mb-0"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" name="username" class="form-control" required autofocus>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Sign in</button>
-                </form>
-                <p class="text-center mt-3 text-muted"><small>CDRRMO Staff Access Only</small></p>
-            </div>
+            </form>
         </div>
     </div>
-    </main>
+</div>
 </body>
 </html>
