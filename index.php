@@ -171,13 +171,14 @@ $selectedNodeId = (int) $selectedNode['node_id'];
             <div class="col-md-8">
                 <div class="card shadow h-100">
                     <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">AI Analysis</h5>
+                        <h5 class="mb-0">AI Analysis <small class="text-light fs-6">Multi-provider</small></h5>
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-2">
-                            Automatically generated from the latest readings.
-                            With a Gemini API key configured, this uses real Gemini AI.
-                            Without a key, a built-in default engine produces a scripted analysis.
+                            Automatically generated from the latest readings using an 8-provider
+                            AI fallback system: Grok → Gemini → Groq → Mistral → Cerebras →
+                            Cloudflare → OpenRouter → Hugging Face → Default Engine.
+                            The first available provider responds; if it fails, the next takes over.
                         </p>
                         <div id="ai-result">
                             <p class="text-muted mb-0">Waiting for data…</p>

@@ -107,9 +107,19 @@ function fetchAiAnalysis(latest, locName) {
         }),
         success: function (result) {
             if (result.success) {
-                const sourceLabel = result.source === 'gemini'
-                    ? '<span class="badge bg-success ms-2">Gemini AI</span>'
-                    : '<span class="badge bg-secondary ms-2">Default Engine</span>';
+                // Color the badge by provider type
+                let badgeClass = 'bg-secondary';
+                if (result.provider) {
+                    if (result.provider.startsWith('Grok'))          badgeClass = 'bg-dark';
+                    else if (result.provider.startsWith('Gemini'))   badgeClass = 'bg-success';
+                    else if (result.provider.startsWith('Groq'))    badgeClass = 'bg-warning text-dark';
+                    else if (result.provider.startsWith('Mistral')) badgeClass = 'bg-danger';
+                    else if (result.provider.startsWith('Cerebras'))badgeClass = 'bg-info text-dark';
+                    else if (result.provider.startsWith('Cloudflare'))badgeClass = 'bg-info';
+                    else if (result.provider.startsWith('OpenRouter'))badgeClass = 'bg-primary';
+                    else if (result.provider.startsWith('Hugging')) badgeClass = 'bg-warning text-dark';
+                }
+                const sourceLabel = `<span class="badge ${badgeClass} ms-2">${esc(result.provider || 'Default Engine')}</span>`;
                 $('#ai-result').html(`
                     <p class="mb-0" style="white-space: pre-wrap;">${esc(result.analysis)}</p>
                     <div class="mt-2">${sourceLabel}</div>`);

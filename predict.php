@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/RiskEngine.php';
-require_once __DIR__ . '/classes/Gemini.php';
+require_once __DIR__ . '/classes/AIAnalyzer.php';
 
 header('Content-Type: application/json');
 
@@ -24,7 +24,7 @@ if (!is_array($input)) {
 
 // ── AI analysis mode ────────────────────────────────────
 if (($input['action'] ?? '') === 'ai') {
-    $result = Gemini::analyze($input);
+    $result = AIAnalyzer::analyze($input);
     echo json_encode($result);
     exit;
 }
